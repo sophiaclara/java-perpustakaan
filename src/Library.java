@@ -1,5 +1,6 @@
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.text.ParseException;
 
 public class Library {
     //Enkapsulasi: Atribut bookList, memberList, dan transactionHistory dienkapsulasi dengan deklarasi private,
@@ -7,6 +8,7 @@ public class Library {
     private ArrayList<Member> memberList;
     private ArrayList<History> transactionHistory;
     private String member_id; // Tambahkan atribut untuk melacak ID anggota saat ini
+    private FileManager fileManager;
 
     public void run() {
         Scanner scanner = new Scanner(System.in);
@@ -19,6 +21,7 @@ public class Library {
             System.out.println("1. Buku");
             System.out.println("2. Anggota");
             System.out.println("3. Transaksi");
+            System.out.println("4. File Manager");
             System.out.print("\nPilih menu: ");
 
             while (!scanner.hasNextInt()) {
@@ -38,6 +41,9 @@ public class Library {
                     break;
                 case 3:
                     menuTransaksi(scanner);
+                    break;
+                case 4:
+                    menuFile(scanner);
                     break;
                 case 0:
                     System.out.println("\nTerima kasih. Sampai jumpa!");
@@ -94,8 +100,9 @@ public class Library {
         int submenu;
         do {
             System.out.println("\n********** Menu Anggota **********");
-            System.out.println("1. Tambah Anggota");
-            System.out.println("2. Hapus Anggota");
+            System.out.println("1. Lihat Anggota");
+            System.out.println("2. Tambah Anggota");
+            System.out.println("3. Hapus Anggota");
             System.out.println("0. Kembali");
             System.out.print("\nPilih submenu: ");
 
@@ -109,9 +116,12 @@ public class Library {
 
             switch (submenu) {
                 case 1:
-                    tambahAnggota(scanner);
+                    lihatAnggota(scanner);
                     break;
                 case 2:
+                    tambahAnggota(scanner);
+                    break;
+                case 3:
                     hapusAnggota(scanner);
                     break;
                 case 0:
@@ -150,6 +160,47 @@ public class Library {
                     break;
                 case 3:
                     lihatTransaksi();
+                    break;
+                case 0:
+                    break;
+                default:
+                    System.out.println("Pilihan tidak valid. Silakan pilih submenu yang sesuai.");
+                    break;
+            }
+        } while (submenu != 0);
+    }
+
+    private void menuFile(Scanner scanner) {
+        int submenu;
+        do {
+            System.out.println("\n********** Menu Transaksi **********");
+            System.out.println("1. Save Anggota");
+            System.out.println("2. Save Buku");
+            System.out.println("3. Load Anggota");
+            System.out.println("4. Load Buku");
+            System.out.println("0. Kembali");
+            System.out.print("\nPilih submenu: ");
+
+            while (!scanner.hasNextInt()) {
+                System.out.print("Pilihan tidak valid. Silakan pilih submenu yang sesuai !");
+                System.out.print("\nPilih submenu: ");
+                scanner.next();
+            }
+            submenu = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (submenu) {
+                case 1:
+                    saveMembersToFile("members.csv");
+                    break;
+                case 2:
+                    saveBooksToFile("books.csv");
+                    break;
+                case 3:
+                    loadMembersFromFile("members.csv");
+                    break;
+                case 4:
+                    loadBooksFromFile("books.csv");
                     break;
                 case 0:
                     break;
@@ -253,6 +304,8 @@ public class Library {
         System.out.println("---------------------------------------------------------------");
         System.out.printf("| %-30s | %-15s | %-10s |\n", "Judul", "ISBN", "Status");
         System.out.println("---------------------------------------------------------------");
+
+        loadBooksFromFile("books.csv"); // Memuat data anggota dari file CSV
 
         for (Book book : bookList) {
             String status = book.isBorrowed() ? "Dipinjam" : "Tersedia";
@@ -417,6 +470,7 @@ public class Library {
         bookList = new ArrayList<>(); // Enkapsulasi: Inisialisasi daftar buku sebagai atribut privat dengan ArrayList.
         memberList = new ArrayList<>(); // Enkapsulasi: Inisialisasi daftar anggota sebagai atribut privat dengan ArrayList.
         transactionHistory = new ArrayList<>(); // Enkapsulasi: Inisialisasi riwayat transaksi sebagai atribut privat dengan ArrayList.
+        fileManager = new FileManager();
     }
 
     public void addBook(Book book) {
@@ -427,4 +481,75 @@ public class Library {
         memberList.add(member); // Enkapsulasi: Menambahkan objek member ke dalam daftar anggota (memberList).
     }
 
+    private void lihatAnggota(Scanner scanner) {
+        System.out.println("Daftar Anggota:");
+        System.out.println("---------------------------------------------------------------");
+        System.out.printf("| %-10s | %-30s | %-50s |\n", "ID Anggota", "Nama", "Alamat");
+        System.out.println("---------------------------------------------------------------");
+
+        loadMembersFromFile("members.csv"); // Memuat data anggota dari file CSV
+
+        for (Member member : memberList) {
+            System.out.printf("| %-10s | %-30s | %-50s |\n", member.getMemberId(), member.getName(), member.getAddress());
+        }
+
+        System.out.println("---------------------------------------------------------------");
+    }
+
+    private void saveBooksToFile(String filename) {
+        StringBuilder data = new StringBuilder();
+        for (Book book : bookList) {
+            data.append(book.getTitle()).append(";")
+                    .append(book.getAuthor()).append(";")
+                    .append(book.getIsbn()).append(";")
+                    .append(book.getQuantity()).append("\n");
+        }
+        fileManager.saveToFile(filename, data.toString());
+    }
+
+    private void saveMembersToFile(String filename) {
+        StringBuilder data = new StringBuilder();
+        for (Member member : memberList) {
+            data.append(member.getMemberId()).append(";")
+                    .append(member.getName()).append(";")
+                    .append(member.getAddress()).append("\n");
+        }
+        fileManager.saveToFile(filename, data.toString());
+    }
+
+    private void loadBooksFromFile(String filename) {
+        try {
+            String content = fileManager.loadFromFile(filename);
+            String[] lines = content.split("\n");
+            bookList.clear(); // Mengosongkan daftar buku sebelum memuat data dari file CSV
+            for (String line : lines) {
+                String[] parts = line.split(",");
+                if (parts.length == 4) {
+                    String title = parts[0];
+                    String author = parts[1];
+                    String isbn = parts[2];
+                    int quantity = Integer.parseInt(parts[3]);
+                    bookList.add(new Book(title, author, isbn, quantity));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading books from file: " + e.getMessage());
+        }
+    }
+
+
+    private void loadMembersFromFile(String filename) {
+        String content = fileManager.loadFromFile(filename);
+        String[] lines = content.split("\n");
+        memberList.clear(); // Mengosongkan daftar anggota sebelum memuat data dari file CSV
+        for (String line : lines) {
+            String[] parts = line.split(",");
+            if (parts.length == 3) {
+                String memberId = parts[0];
+                String name = parts[1];
+                String address = parts[2];
+                memberList.add(new Member(memberId, name, address));
+            }
+        }
+    }
 }
